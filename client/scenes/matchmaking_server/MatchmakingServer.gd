@@ -3,35 +3,52 @@ extends Node
 
 signal server_list_updated
 
-const PORT: int = 9999
-const SERVER_IP: String = "127.0.0.1"
+const DEFAULT_HOST: String = "localhost"
+const DEFAULT_PORT: String = "10001"
 
-var available_servers: Dictionary
+const GAMESERVER_RESOURCE_PATH: String = "gameserver"
+
+onready var _fetch_gameservers_req: HTTPRequest = $FetchGameServers setget _noset
+onready var _fetch_gameserver_details_req: HTTPRequest = $FetchGameServerDetails setget _noset
+
+var _server_host: String setget _noset
+var _server_port: String setget _noset
+var _available_servers: Dictionary setget _noset
+
+
+# readonly field setter
+func _noset(_val) -> void:
+	pass
 
 
 func _ready() -> void:
-	# warning-ignore:return_value_discarded
-	get_tree().connect("connected_to_server", self, "_on_connection_success")
+	_server_host = OS.get_environment("MATCHMAKING_HOST")
+	_server_port = OS.get_environment("MATCHMAKING_PORT")
 	
-	join_server(SERVER_IP, PORT)
+	if not _server_host:
+		_server_host = DEFAULT_HOST
+	if not _server_port:
+		_server_port = DEFAULT_PORT
+	
+	fetch_gameserver_details("asdf")
 
 
-func join_server(server_ip: String, port: int) -> void:
-	var peer: NetworkedMultiplayerENet = NetworkedMultiplayerENet.new()
-	var _err: int = peer.create_client(server_ip, port)
-	get_tree().network_peer = peer
-	print("joined server: " + str(peer))
+func fetch_gameservers(page: int = 0) -> void:
+	var url: String = "http://%s:%s/%s?page=%s" % [_server_host, _server_port, GAMESERVER_RESOURCE_PATH, page]
+	_fetch_gameservers_req.request(url)
 
 
-func fetch_servers() -> void:
-	rpc_id(1, "_send_servers")
+func fetch_gameserver_details(server_id: String) -> void:
+	var url: String = "http://%s:%s/%s/%s" % [_server_host, _server_port, GAMESERVER_RESOURCE_PATH, server_id]
+	print(url)
+	_fetch_gameserver_details_req.request(url)
 
 
-func _on_connection_success() -> void:
-	fetch_servers()
+func _on_FetchGameServers_request_completed(result, response_code, headers, body):
+	var response_json = parse_json(body.get_string_from_utf8())
+	print(response_json)
 
 
-remote func _recieve_servers(servers: Dictionary) -> void:
-	available_servers = servers
-	emit_signal("server_list_updated")
-	print(available_servers)
+func _on_FetchGameServerDetails_request_completed(result, response_code, headers, body):
+	var response_json = parse_json(body.get_string_from_utf8())
+	print(response_json)

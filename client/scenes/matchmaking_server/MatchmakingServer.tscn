@@ -4,3 +4,9 @@
 
 [node name="MatchmakingServer" type="Node"]
 script = ExtResource( 1 )
+
+[node name="FetchGameServers" type="HTTPRequest" parent="."]
+
+[node name="FetchGameServerDetails" type="HTTPRequest" parent="."]
+[connection signal="request_completed" from="FetchGameServers" to="." method="_on_FetchGameServers_request_completed"]
+[connection signal="request_completed" from="FetchGameServerDetails" to="." method="_on_FetchGameServerDetails_request_completed"]
